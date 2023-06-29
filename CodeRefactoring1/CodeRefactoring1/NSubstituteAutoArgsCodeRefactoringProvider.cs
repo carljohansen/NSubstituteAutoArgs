@@ -4,6 +4,7 @@ using Microsoft.CodeAnalysis.CodeRefactorings;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Composition;
 using System.Linq;
 using System.Threading.Tasks;
@@ -73,31 +74,76 @@ namespace NSubsituteAutoArgs
             }
 
             var guessedMethodGroups = model.GetMemberGroup(invocationNode.Expression);
-            if (guessedMethodGroups.Any())
+            List<CodeAction> addArgOverloadActions = new List<CodeAction>();
+
+            if (!guessedMethodGroups.Any())
             {
-                var calledMethodName = ((invocationNode.Expression as MemberAccessExpressionSyntax).Name as IdentifierNameSyntax).Identifier.Text;
-
-                var methodGroup = guessedMethodGroups[0];
-                if (methodGroup.ContainingType
-                                    .GetMembers()
-                                    .FirstOrDefault(m => m.Name == calledMethodName) is IMethodSymbol firstMatchedOverload)
-                {
-                    var paramNames = firstMatchedOverload.Parameters.Select(p => p.Type.ToString()).ToArray();
-
-                    var addArgAnysAction = CodeAction.Create("Add Arg.Any<>() Arguments", c =>
-                    {
-                        var generatedArgList = CreateArgsAny(paramNames);
-                        var oldInvNode = invocationNode;
-                        var newInvNode = oldInvNode
-                                            .WithArgumentList(generatedArgList)
-                                            .WithTrailingTrivia(SyntaxFactory.CarriageReturnLineFeed);
-                        var newRoot = root.ReplaceNode(oldInvNode, newInvNode);
-                        return Task.FromResult(context.Document.WithSyntaxRoot(newRoot));
-                    });
-
-                    context.RegisterRefactoring(addArgAnysAction);
-                }
+                return;
             }
+
+            var calledMethodName = ((invocationNode.Expression as MemberAccessExpressionSyntax).Name as IdentifierNameSyntax).Identifier.Text;
+
+            var matchingMethodSymbols = guessedMethodGroups[0].ContainingType.GetMembers()
+                                                                                .Where(m => m.Name == calledMethodName && m is IMethodSymbol)
+                                                                                .Cast<IMethodSymbol>();
+
+            foreach (var matchingMethodSymbol in matchingMethodSymbols)
+            {
+                //if (methodGroup.ContainingType
+                //                   .GetMembers()
+                //                   .FirstOrDefault(m => m.Name == calledMethodName) is IMethodSymbol firstMatchedOverload)
+                //{
+                var paramNames = matchingMethodSymbol.Parameters.Select(p => p.Type.ToString()).ToArray();
+
+                var addArgAnysAction = CodeAction.Create("Add Arg.Any<>() Arguments", c =>
+                {
+                    var generatedArgList = CreateArgsAny(paramNames);
+                    var oldInvNode = invocationNode;
+                    var newInvNode = oldInvNode
+                                        .WithArgumentList(generatedArgList)
+                                        .WithTrailingTrivia(SyntaxFactory.CarriageReturnLineFeed);
+                    var newRoot = root.ReplaceNode(oldInvNode, newInvNode);
+                    return Task.FromResult(context.Document.WithSyntaxRoot(newRoot));
+                });
+
+                addArgOverloadActions.Add(addArgAnysAction);
+                //context.RegisterRefactoring(addArgAnysAction);
+                //}
+            }
+
+            if (addArgOverloadActions.Count == 1)
+            {
+                context.RegisterRefactoring(addArgOverloadActions[0]);
+            }
+            else
+            {
+                var actionGroup = CodeAction.Create("Add Arg.Any<>() Arguments", addArgOverloadActions.ToImmutableArray(), false);
+                context.RegisterRefactoring(actionGroup);
+            }
+            //if (guessedMethodGroups.Any())
+            //{
+
+            //    var methodGroup = guessedMethodGroups[0];
+            //    if (methodGroup.ContainingType
+            //                        .GetMembers()
+            //                        .FirstOrDefault(m => m.Name == calledMethodName) is IMethodSymbol firstMatchedOverload)
+            //    {
+            //        var paramNames = firstMatchedOverload.Parameters.Select(p => p.Type.ToString()).ToArray();
+
+            //        var addArgAnysAction = CodeAction.Create("Add Arg.Any<>() Arguments", c =>
+            //        {
+            //            var generatedArgList = CreateArgsAny(paramNames);
+            //            var oldInvNode = invocationNode;
+            //            var newInvNode = oldInvNode
+            //                                .WithArgumentList(generatedArgList)
+            //                                .WithTrailingTrivia(SyntaxFactory.CarriageReturnLineFeed);
+            //            var newRoot = root.ReplaceNode(oldInvNode, newInvNode);
+            //            return Task.FromResult(context.Document.WithSyntaxRoot(newRoot));
+            //        });
+
+            //        context.RegisterRefactoring(addArgAnysAction);
+            //    }
+            //}
         }
 
         private ArgumentListSyntax CreateArgsAny(IEnumerable<string> argumentTypeNames)
