@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <PackageManifest Version="2.0.0" xmlns="http://schemas.microsoft.com/developer/vsx-schema/2011" xmlns:d="http://schemas.microsoft.com/developer/vsx-schema-design/2011">
   <Metadata>
-    <Identity Id="CodeRefactoring1..b08daea1-d743-47d5-8a3a-8745bf51b582" Version="1.0" Language="en-US" Publisher="Carl Johansen"/>
-    <DisplayName>CodeRefactoring1</DisplayName>
-    <Description xml:space="preserve">This is a sample code refactoring extension for the .NET Compiler Platform ("Roslyn").</Description>
+    <Identity Id="NSubstituteAutoArgs..b08daea1-d743-47d5-8a3a-8745bf51b582" Version="1.0" Language="en-US" Publisher="Carl Johansen"/>
+    <DisplayName>NSubstitute AutoArgs</DisplayName>
+    <Description xml:space="preserve">Code refactoring extension to insert Arg.Any&lt;T&gt;() calls into an NSubstitute method setup.</Description>
   </Metadata>
   <Installation>
     <InstallationTarget Id="Microsoft.VisualStudio.Community" Version="[15.0,)" />
@@ -12,7 +12,7 @@
     <Dependency Id="Microsoft.Framework.NDP" DisplayName="Microsoft .NET Framework" d:Source="Manual" Version="[4.5,)" />
   </Dependencies>
   <Assets>
-    <Asset Type="Microsoft.VisualStudio.MefComponent" d:Source="Project" d:ProjectName="CodeRefactoring1" Path="|CodeRefactoring1|"/>
+    <Asset Type="Microsoft.VisualStudio.MefComponent" d:Source="Project" d:ProjectName="NSubstituteAutoArgs" Path="|NSubstituteAutoArgs|"/>
   </Assets>
   <Prerequisites>
     <Prerequisite Id="Microsoft.VisualStudio.Component.CoreEditor" Version="[15.0,)" DisplayName="Visual Studio core editor" />

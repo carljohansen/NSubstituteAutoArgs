@@ -4,7 +4,7 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace CodeRefactoring1
+namespace NSubsituteAutoArgs
 {
     public static class TypeSyntaxFactory
     {
