@@ -20,28 +20,35 @@ namespace NSubsituteAutoArgs
             // Find the node at the selection.
             var node = root.FindNode(context.Span);
 
-            bool isPossibleMatch = false;
-            var currNode = node;
-            while (currNode != null && !isPossibleMatch)
-            {
-                isPossibleMatch = currNode.IsKind(SyntaxKind.InvocationExpression);
-                currNode = currNode.Parent;
-            }
+            // We keep our criteria narrow to avoid as much as possible showing our offering in inapplicable situations.
+            // We won't show unless you are inside the *empty* argument list of an invocation.
 
-            if (!isPossibleMatch)
+            if (!node.IsKind(SyntaxKind.ArgumentList))
+            {
+                return;
+            }
+            var argListNode = node as ArgumentListSyntax;
+            if (argListNode.Arguments.Any())
             {
                 return;
             }
 
-            var nodeStack = new List<SyntaxNode>();
-            currNode = node;
-            while (currNode != null)
+            node = node.Parent;
+            if (!node.IsKind(SyntaxKind.InvocationExpression))
             {
-                nodeStack.Add(currNode);
-                currNode = currNode.Parent;
+                return;
             }
 
-            var invocationNode = nodeStack.FirstOrDefault(n => n.IsKind(SyntaxKind.InvocationExpression)) as InvocationExpressionSyntax;
+            //var nodeStack = new List<SyntaxNode>();
+            //currNode = node;
+            //while (currNode != null)
+            //{
+            //    nodeStack.Add(currNode);
+            //    currNode = currNode.Parent;
+            //}
+
+            //var invocationNode = nodeStack.FirstOrDefault(n => n.IsKind(SyntaxKind.InvocationExpression)) as InvocationExpressionSyntax;
+            var invocationNode = node as InvocationExpressionSyntax;
             if (invocationNode?.Expression == null)
             {
                 return;
@@ -53,9 +60,15 @@ namespace NSubsituteAutoArgs
 
             if (invocationTypeInfo.Type.TypeKind != TypeKind.Interface)
             {
-                // Our biggest problem is narrowing the contexts in which we show our offer.  This is hard because the semantic
-                // model can't really tell whether the invocation is on a mock or not.  But at least we can avoid appearing in
+                // Our biggest problem is narrowing the contexts in which we show our offering.  This is hard because the semantic
+                // model can't really tell whether the selected invocation is on a mock or not.  But at least we can avoid appearing in
                 // regular method calls - we just say that we will be used only in the context of an interface call.
+                return;
+            }
+
+            // Adding this improves our accuracy, because we won't show our offering unless the compilation references NSubstitute.
+            if (!model.Compilation.ExternalReferences.Any(r => r.Display.Contains("NSubstitute")))
+            {
                 return;
             }
 
