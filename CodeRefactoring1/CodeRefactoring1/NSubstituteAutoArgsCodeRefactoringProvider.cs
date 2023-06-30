@@ -87,6 +87,7 @@ namespace NSubsituteAutoArgs
                                                                                 .Where(m => m.Name == calledMethodName && m is IMethodSymbol)
                                                                                 .Cast<IMethodSymbol>();
 
+            var hasOverloads = matchingMethodSymbols.Count() > 1;
             foreach (var matchingMethodSymbol in matchingMethodSymbols)
             {
                 //if (methodGroup.ContainingType
@@ -94,8 +95,11 @@ namespace NSubsituteAutoArgs
                 //                   .FirstOrDefault(m => m.Name == calledMethodName) is IMethodSymbol firstMatchedOverload)
                 //{
                 var paramNames = matchingMethodSymbol.Parameters.Select(p => p.Type.ToString()).ToArray();
+                var actionName = hasOverloads
+                                    ? GetMethodDisplay(matchingMethodSymbol)
+                                    : "Add Arg.Any<>() Arguments";
 
-                var addArgAnysAction = CodeAction.Create("Add Arg.Any<>() Arguments", c =>
+                var addArgAnysAction = CodeAction.Create(actionName, c =>
                 {
                     var generatedArgList = CreateArgsAny(paramNames);
                     var oldInvNode = invocationNode;
@@ -111,14 +115,14 @@ namespace NSubsituteAutoArgs
                 //}
             }
 
-            if (addArgOverloadActions.Count == 1)
-            {
-                context.RegisterRefactoring(addArgOverloadActions[0]);
-            }
-            else
+            if (hasOverloads)
             {
                 var actionGroup = CodeAction.Create("Add Arg.Any<>() Arguments", addArgOverloadActions.ToImmutableArray(), false);
                 context.RegisterRefactoring(actionGroup);
+            }
+            else
+            {
+                context.RegisterRefactoring(addArgOverloadActions[0]);
             }
             //if (guessedMethodGroups.Any())
             //{
@@ -144,6 +148,23 @@ namespace NSubsituteAutoArgs
             //        context.RegisterRefactoring(addArgAnysAction);
             //    }
             //}
+        }
+
+        private static string GetMethodDisplay(IMethodSymbol methodSymbol)
+        {
+            const int maxLen = 50;
+            var fullName = methodSymbol.ToDisplayString();
+            var bracketPos = fullName.IndexOf('(');
+            if (bracketPos < 0)
+            {
+                return fullName.Truncate(maxLen);
+            }
+            var dotPos = fullName.Substring(0, bracketPos).LastIndexOf('.');
+            if (dotPos < 0)
+            {
+                return fullName.Truncate(maxLen);
+            }
+            return fullName.Substring(dotPos).Truncate(maxLen);
         }
 
         private ArgumentListSyntax CreateArgsAny(IEnumerable<string> argumentTypeNames)
