@@ -4,8 +4,8 @@
 
   <PropertyGroup>
     <TargetFramework>net472</TargetFramework>
-    <RootNamespace>CodeRefactoring1.Vsix</RootNamespace>
-    <AssemblyName>CodeRefactoring1.Vsix</AssemblyName>
+    <RootNamespace>CarlJohansen.NSubstituteAutoArgs</RootNamespace>
+    <AssemblyName>NSubstituteAutoArgsCodeRefactor</AssemblyName>
   </PropertyGroup>
 
   <PropertyGroup>
@@ -19,13 +19,20 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.VSSDK.BuildTools" Version="16.8.3038" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.VisualStudio.SDK" Version="17.6.36389" />
+    <PackageReference Include="Microsoft.VSSDK.BuildTools" Version="17.6.2164" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.VSSDK.Vsixsigntool" Version="16.2.29116.78" />
   </ItemGroup>
 
   <PropertyGroup>
     <StartAction>Program</StartAction>
     <StartProgram>$(DevEnvDir)devenv.exe</StartProgram>
     <StartArguments>/rootsuffix $(VSSDKTargetPlatformRegRootSuffix)</StartArguments>
+    <Title>NSubstitute Any.Arg parameter generator</Title>
+    <Authors>Carl Johansen</Authors>
+    <Description>Code refactoring extension to insert Arg.Any&amp;lt;T&amp;gt;() calls into an NSubstitute method setup.</Description>
+    <Copyright>Copyright 2023 Carl Johansen</Copyright>
+    <PackageTags>NSubstitute,Mock</PackageTags>
   </PropertyGroup>
 
   <Import Sdk="Microsoft.NET.Sdk" Project="Sdk.targets" />
