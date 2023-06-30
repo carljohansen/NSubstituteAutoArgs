@@ -68,51 +68,47 @@ namespace NSubsituteAutoArgs
             }
 
             // Adding this improves our accuracy, because we won't show our offering unless the compilation references NSubstitute.
+            // However, it comes with a performance penalty.  Most of the time we will be looking through a long list and not finding a match.
             if (!model.Compilation.ExternalReferences.Any(r => r.Display.Contains("NSubstitute")))
             {
                 return;
             }
 
-            var guessedMethodGroups = model.GetMemberGroup(invocationNode.Expression);
-            List<CodeAction> addArgOverloadActions = new List<CodeAction>();
+            //var guessedMethodGroups = model.GetMemberGroup(invocationNode.Expression);
 
-            if (!guessedMethodGroups.Any())
+            //if (!guessedMethodGroups.Any())
+            //{
+            //    return;
+            //}
+
+            //var matchingMethodSymbols = GetMatchingMethodSymbols(guessedMethodGroups, invocationNode);
+            //if (!matchingMethodSymbols.Any())
+            //{
+            //    return;
+            //}
+
+            IMethodSymbol[] candiateMethods;
+
+            var invocationSymbolInfo = model.GetSymbolInfo(invocationNode);
+            if (invocationSymbolInfo.CandidateReason == CandidateReason.OverloadResolutionFailure)
+            {
+                // We _should_ be getting this overload resolution failure, because the user has called us before
+                // adding any invocation parameters.  Roslyn's candidates tell us exactly what we need to build our offerings.
+                var overloadCandidates = invocationSymbolInfo.CandidateSymbols;
+                candiateMethods = overloadCandidates.Cast<IMethodSymbol>().ToArray();
+            }
+            else
             {
                 return;
             }
 
-            var calledMethodName = ((invocationNode.Expression as MemberAccessExpressionSyntax).Name as IdentifierNameSyntax).Identifier.Text;
+            var hasOverloads = candiateMethods.Length > 1;
+            var addArgOverloadActions = new List<CodeAction>();
 
-            var matchingMethodSymbols = guessedMethodGroups[0].ContainingType.GetMembers()
-                                                                                .Where(m => m.Name == calledMethodName && m is IMethodSymbol)
-                                                                                .Cast<IMethodSymbol>();
-
-            var hasOverloads = matchingMethodSymbols.Count() > 1;
-            foreach (var matchingMethodSymbol in matchingMethodSymbols)
+            foreach (var candidateMethod in candiateMethods)
             {
-                //if (methodGroup.ContainingType
-                //                   .GetMembers()
-                //                   .FirstOrDefault(m => m.Name == calledMethodName) is IMethodSymbol firstMatchedOverload)
-                //{
-                var paramNames = matchingMethodSymbol.Parameters.Select(p => p.Type.ToString()).ToArray();
-                var actionName = hasOverloads
-                                    ? GetMethodDisplay(matchingMethodSymbol)
-                                    : "Add Arg.Any<>() Arguments";
-
-                var addArgAnysAction = CodeAction.Create(actionName, c =>
-                {
-                    var generatedArgList = CreateArgsAny(paramNames);
-                    var oldInvNode = invocationNode;
-                    var newInvNode = oldInvNode
-                                        .WithArgumentList(generatedArgList)
-                                        .WithTrailingTrivia(SyntaxFactory.CarriageReturnLineFeed);
-                    var newRoot = root.ReplaceNode(oldInvNode, newInvNode);
-                    return Task.FromResult(context.Document.WithSyntaxRoot(newRoot));
-                });
-
+                var addArgAnysAction = CreateCodeAction(context.Document, root, invocationNode, hasOverloads, candidateMethod);
                 addArgOverloadActions.Add(addArgAnysAction);
-                //context.RegisterRefactoring(addArgAnysAction);
-                //}
             }
 
             if (hasOverloads)
@@ -124,30 +120,50 @@ namespace NSubsituteAutoArgs
             {
                 context.RegisterRefactoring(addArgOverloadActions[0]);
             }
-            //if (guessedMethodGroups.Any())
-            //{
+        }
 
-            //    var methodGroup = guessedMethodGroups[0];
-            //    if (methodGroup.ContainingType
-            //                        .GetMembers()
-            //                        .FirstOrDefault(m => m.Name == calledMethodName) is IMethodSymbol firstMatchedOverload)
-            //    {
-            //        var paramNames = firstMatchedOverload.Parameters.Select(p => p.Type.ToString()).ToArray();
+        //private static IMethodSymbol[] GetMatchingMethodSymbols(ImmutableArray<ISymbol> guessedMethodGroups,
+        //                                                                             InvocationExpressionSyntax invocationNode)
+        //{
+        //    var calledMethodName = ((invocationNode.Expression as MemberAccessExpressionSyntax)?.Name as IdentifierNameSyntax)?.Identifier.Text;
+        //    if (calledMethodName == null)
+        //    {
+        //        calledMethodName = ((invocationNode.Expression as MemberAccessExpressionSyntax)?.Name as GenericNameSyntax)?.Identifier.Text;
+        //        if (calledMethodName == null)
+        //        {
+        //            return Array.Empty<IMethodSymbol>();
+        //        }
+        //    }
 
-            //        var addArgAnysAction = CodeAction.Create("Add Arg.Any<>() Arguments", c =>
-            //        {
-            //            var generatedArgList = CreateArgsAny(paramNames);
-            //            var oldInvNode = invocationNode;
-            //            var newInvNode = oldInvNode
-            //                                .WithArgumentList(generatedArgList)
-            //                                .WithTrailingTrivia(SyntaxFactory.CarriageReturnLineFeed);
-            //            var newRoot = root.ReplaceNode(oldInvNode, newInvNode);
-            //            return Task.FromResult(context.Document.WithSyntaxRoot(newRoot));
-            //        });
+        //    return guessedMethodGroups[0].ContainingType.GetMembers()
+        //                                                .Where(m => m.Name == calledMethodName && m is IMethodSymbol)
+        //                                                .Cast<IMethodSymbol>()
+        //                                                .ToArray();
+        //}
 
-            //        context.RegisterRefactoring(addArgAnysAction);
-            //    }
-            //}
+        private static CodeAction CreateCodeAction(Document sourceDocument,
+                                            SyntaxNode root,
+                                            InvocationExpressionSyntax invocationNode,
+                                            bool hasOverloads,
+                                            IMethodSymbol matchingMethodSymbol)
+        {
+            var paramNames = matchingMethodSymbol.Parameters.Select(p => p.Type.ToString()).ToArray();
+            var actionName = hasOverloads
+                                ? GetMethodDisplay(matchingMethodSymbol)
+                                : "Add Arg.Any<>() Arguments";
+
+            var addArgAnysAction = CodeAction.Create(actionName, c =>
+            {
+                var generatedArgList = CreateArgsAny(paramNames);
+                var oldInvNode = invocationNode;
+                var newInvNode = oldInvNode
+                                    .WithArgumentList(generatedArgList)
+                                    .WithTrailingTrivia(SyntaxFactory.CarriageReturnLineFeed);
+                var newRoot = root.ReplaceNode(oldInvNode, newInvNode);
+                return Task.FromResult(sourceDocument.WithSyntaxRoot(newRoot));
+            });
+
+            return addArgAnysAction;
         }
 
         private static string GetMethodDisplay(IMethodSymbol methodSymbol)
@@ -167,7 +183,7 @@ namespace NSubsituteAutoArgs
             return fullName.Substring(dotPos).Truncate(maxLen);
         }
 
-        private ArgumentListSyntax CreateArgsAny(IEnumerable<string> argumentTypeNames)
+        private static ArgumentListSyntax CreateArgsAny(IEnumerable<string> argumentTypeNames)
         {
             var smartGenTypes = argumentTypeNames.Select(async a => await TypeSyntaxFactory.CreateTypeSyntax(a))
                                                     .Select(t => t.Result)
