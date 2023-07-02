@@ -48,16 +48,17 @@ namespace NSubsituteAutoArgs
             //    currNode = currNode.Parent;
             //}
 
-            //var invocationNode = nodeStack.FirstOrDefault(n => n.IsKind(SyntaxKind.InvocationExpression)) as InvocationExpressionSyntax;
             var invocationNode = node as InvocationExpressionSyntax;
-            if (invocationNode?.Expression == null)
+            if (!(invocationNode.Expression is MemberAccessExpressionSyntax memberAccessNode)) return;
+            var invocationTarget = memberAccessNode.Expression;
+            if (invocationTarget == null)
             {
                 return;
             }
 
             var model = await context.Document.GetSemanticModelAsync(context.CancellationToken).ConfigureAwait(false);
 
-            var invocationTypeInfo = model.GetTypeInfo((invocationNode.Expression as MemberAccessExpressionSyntax).Expression);
+            var invocationTypeInfo = model.GetTypeInfo(invocationTarget);
 
             if (invocationTypeInfo.Type.TypeKind != TypeKind.Interface)
             {
