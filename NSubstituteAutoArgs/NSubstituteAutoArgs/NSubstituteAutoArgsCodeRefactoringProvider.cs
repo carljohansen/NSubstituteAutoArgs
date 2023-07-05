@@ -75,21 +75,6 @@ namespace NSubsituteAutoArgs
                 return;
             }
 
-            //var guessedMethodGroups = model.GetMemberGroup(invocationNode.Expression);
-
-            //if (!guessedMethodGroups.Any())
-            //{
-            //    return;
-            //}
-
-            //var matchingMethodSymbols = GetMatchingMethodSymbols(guessedMethodGroups, invocationNode);
-            //if (!matchingMethodSymbols.Any())
-            //{
-            //    return;
-            //}
-
-            var invocationNodePosition = root.SyntaxTree.GetLocation(invocationNode.Span).SourceSpan.Start;
-
             IMethodSymbol[] candiateMethods;
 
             var invocationSymbolInfo = model.GetSymbolInfo(invocationNode);
@@ -110,7 +95,7 @@ namespace NSubsituteAutoArgs
 
             foreach (var candidateMethod in candiateMethods)
             {
-                var addArgAnysAction = CreateCodeAction(context.Document, root, invocationNode, model, invocationNodePosition, hasOverloads, candidateMethod);
+                var addArgAnysAction = CreateCodeAction(context.Document, root, invocationNode, model, invocationNode.Span.Start, hasOverloads, candidateMethod);
                 addArgOverloadActions.Add(addArgAnysAction);
             }
 
