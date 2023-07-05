@@ -88,6 +88,8 @@ namespace NSubsituteAutoArgs
             //    return;
             //}
 
+            var invocationNodePosition = root.SyntaxTree.GetLocation(invocationNode.Span).SourceSpan.Start;
+
             IMethodSymbol[] candiateMethods;
 
             var invocationSymbolInfo = model.GetSymbolInfo(invocationNode);
@@ -108,7 +110,7 @@ namespace NSubsituteAutoArgs
 
             foreach (var candidateMethod in candiateMethods)
             {
-                var addArgAnysAction = CreateCodeAction(context.Document, root, invocationNode, hasOverloads, candidateMethod);
+                var addArgAnysAction = CreateCodeAction(context.Document, root, invocationNode, model, invocationNodePosition, hasOverloads, candidateMethod);
                 addArgOverloadActions.Add(addArgAnysAction);
             }
 
@@ -145,10 +147,12 @@ namespace NSubsituteAutoArgs
         private static CodeAction CreateCodeAction(Document sourceDocument,
                                             SyntaxNode root,
                                             InvocationExpressionSyntax invocationNode,
+                                            SemanticModel model,
+                                            int contextualPosition,
                                             bool hasOverloads,
                                             IMethodSymbol matchingMethodSymbol)
         {
-            var paramNames = matchingMethodSymbol.Parameters.Select(p => p.Type.ToString()).ToArray();
+            var paramNames = matchingMethodSymbol.Parameters.Select(p => p.Type.ToMinimalDisplayString(model, contextualPosition)).ToArray();
             var actionName = hasOverloads
                                 ? GetMethodDisplay(matchingMethodSymbol)
                                 : "Add Arg.Any<>() Arguments";

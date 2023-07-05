@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <PackageManifest Version="2.0.0" xmlns="http://schemas.microsoft.com/developer/vsx-schema/2011" xmlns:d="http://schemas.microsoft.com/developer/vsx-schema-design/2011">
   <Metadata>
-    <Identity Id="NSubstituteAutoArgs..b08daea1-d743-47d5-8a3a-8745bf51b582" Version="1.0.1" Language="en-US" Publisher="Carl Johansen"/>
+    <Identity Id="NSubstituteAutoArgs..b08daea1-d743-47d5-8a3a-8745bf51b582" Version="1.0.2" Language="en-US" Publisher="Carl Johansen"/>
     <DisplayName>NSubstitute AutoArgs</DisplayName>
     <Description xml:space="preserve">Code refactoring extension to insert Arg.Any&lt;T&gt;() calls into an NSubstitute method setup.</Description>
   </Metadata>
